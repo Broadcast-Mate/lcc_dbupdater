@@ -21,7 +21,7 @@ function generatePlayerToken(whiteName, blackName) {
 async function fetchCommentaryWithRetry(latestFEN, lastMove, whiteName, blackName, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
-      logger.info(`Attempting to fetch commentary (attempt ${i + 1}/${retries})`, {
+      logger.warning(`Attempting to fetch commentary (attempt ${i + 1}/${retries})`, {
         latestFEN,
         lastMove,
         whiteName,
@@ -55,7 +55,7 @@ async function fetchCommentaryWithRetry(latestFEN, lastMove, whiteName, blackNam
       }
 
       const delay = 5000 * (i + 1);
-      logger.info(`Retrying in ${delay / 1000} seconds...`);
+      logger.warning(`Retrying in ${delay / 1000} seconds...`);
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
@@ -135,9 +135,9 @@ async function updateGame(collection, gameState) {
         update,
         { upsert: true }
       );
-      logger.info(`Updated game ${gameState.gameId}`);
+      logger.warning(`Updated game ${gameState.gameId}`);
     } else {
-      logger.info(`No updates needed for game ${gameState.gameId}. FEN unchanged.`);
+      logger.warning(`No updates needed for game ${gameState.gameId}. FEN unchanged.`);
     }
   } catch (error) {
     logger.error(`Error updating game ${gameState.gameId}:`, error);
