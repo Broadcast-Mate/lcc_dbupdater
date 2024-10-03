@@ -7,11 +7,13 @@ const {
   getGameState,
   fetchCommentary,
   generateAndUploadImage,
+  areAllGamesOver,
+  isRoundLive,
 } = require('./services');
 const logger = require('./logger');
 const TOURNAMENT_ID = process.env.TOURNAMENT_ID;
 const CHECK_INTERVAL = 5000; // 5 seconds
-const GAMES_TO_MONITOR = [1, 2, 3, 4, 5, 6]; // Games 1 to 6
+const GAMES_TO_MONITOR = [1, 2, 3, 4, 5, 6];
 
 function generatePlayerToken(whiteName, blackName) {
   const combinedNames = `${whiteName}${blackName}`.replace(/\s+/g, '').toLowerCase();
@@ -21,7 +23,7 @@ function generatePlayerToken(whiteName, blackName) {
 async function fetchCommentaryWithRetry(latestFEN, lastMove, whiteName, blackName, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
-      logger.warning(`Attempting to fetch commentary (attempt ${i + 1}/${retries})`, {
+      logger.info(`Attempting to fetch commentary (attempt ${i + 1}/${retries})`, {
         latestFEN,
         lastMove,
         whiteName,
@@ -55,7 +57,7 @@ async function fetchCommentaryWithRetry(latestFEN, lastMove, whiteName, blackNam
       }
 
       const delay = 5000 * (i + 1);
-      logger.warning(`Retrying in ${delay / 1000} seconds...`);
+      logger.info(`Retrying in ${delay / 1000} seconds...`);
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
@@ -81,7 +83,6 @@ async function updateGame(collection, gameState) {
     let shouldUpdate = false;
     let shouldGenerateCommentaryAndImage = false;
 
-    // Check if the FEN has changed (indicating a new move)
     if (!existingGame || existingGame.latestFEN !== gameState.latestFEN) {
       shouldUpdate = true;
       shouldGenerateCommentaryAndImage = true;
@@ -91,7 +92,6 @@ async function updateGame(collection, gameState) {
       };
     }
 
-    // Always update these fields even if FEN hasn't changed
     if (
       existingGame &&
       (gameState.result !== existingGame.result || gameState.isLive !== existingGame.isLive)
@@ -135,9 +135,9 @@ async function updateGame(collection, gameState) {
         update,
         { upsert: true }
       );
-      logger.warning(`Updated game ${gameState.gameId}`);
+      logger.info(`Updated game ${gameState.gameId}`);
     } else {
-      logger.warning(`No updates needed for game ${gameState.gameId}. FEN unchanged.`);
+      logger.info(`No updates needed for game ${gameState.gameId}. FEN unchanged.`);
     }
   } catch (error) {
     logger.error(`Error updating game ${gameState.gameId}:`, error);
@@ -148,17 +148,31 @@ async function startDatabaseUpdater() {
   const db = await connectToDatabase();
   const collection = db.collection(process.env.COLLECTION_NAME);
 
-  const latestRound = await getLatestRoundNumber();
-  logger.info(`Latest round is ${latestRound}`);
+  let currentRound = await getLatestRoundNumber();
+  logger.info(`Starting monitoring for round ${currentRound}`);
 
   while (true) {
     try {
+      const allGamesOver = await areAllGamesOver(currentRound);
+      if (allGamesOver) {
+        logger.info(`All games in round ${currentRound} are over. Checking for next round...`);
+        const nextRound = currentRound + 1;
+
+        const roundIsLive = await isRoundLive(nextRound);
+        if (roundIsLive) {
+          currentRound = nextRound;
+          logger.info(`Round ${currentRound} has started. Monitoring new round.`);
+        } else {
+          logger.info(`Round ${nextRound} has not started yet. Continuing to monitor round ${currentRound}.`);
+        }
+      }
+
       for (const gameNumber of GAMES_TO_MONITOR) {
         try {
-          const gameState = await getGameState(latestRound, gameNumber);
+          const gameState = await getGameState(currentRound, gameNumber);
           await updateGame(collection, gameState);
         } catch (error) {
-          logger.error(`Error processing game ${gameNumber}:`, error);
+          logger.error(`Error processing game ${gameNumber} in round ${currentRound}:`, error);
         }
       }
     } catch (error) {

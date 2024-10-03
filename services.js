@@ -44,7 +44,6 @@ async function getLatestRoundNumber() {
     const response = await axios.get(getTourneyUrl());
     const data = response.data;
 
-    // Find the latest round with games
     const latestRound = data.rounds.reduce((latest, round, index) => {
       return round.count > 0 ? index + 1 : latest;
     }, 0);
@@ -53,6 +52,33 @@ async function getLatestRoundNumber() {
   } catch (error) {
     logger.error('Error fetching latest round number:', error);
     throw new Error('Failed to fetch latest round number');
+  }
+}
+
+async function isRoundLive(round) {
+  try {
+    const indexResponse = await axios.get(getIndexUrl(round));
+    const indexData = indexResponse.data;
+    return indexData.pairings && indexData.pairings.length > 0;
+  } catch (error) {
+    logger.warn(`Round ${round} is not live or data is unavailable.`);
+    return false;
+  }
+}
+
+async function areAllGamesOver(round) {
+  try {
+    const indexResponse = await axios.get(getIndexUrl(round));
+    const indexData = indexResponse.data;
+
+    const allGamesOver = indexData.pairings.every((pairing) => {
+      return pairing.result && standardizeResult(pairing.result) !== 'ongoing';
+    });
+
+    return allGamesOver;
+  } catch (error) {
+    logger.error(`Error checking if all games are over in round ${round}:`, error);
+    return false;
   }
 }
 
@@ -102,7 +128,7 @@ async function getGameState(round, gameNumber) {
       isLive: gameData.live || false,
     };
   } catch (error) {
-    logger.error(`Error fetching game state for game ${gameNumber}:`, error);
+    logger.error(`Error fetching game state for game ${gameNumber} in round ${round}:`, error);
     throw error;
   }
 }
@@ -163,13 +189,13 @@ async function fetchCommentary(latestFEN, lastMove, whiteName, blackName) {
 }
 
 async function generateAndUploadImage(fen, whiteName, blackName, evaluation, highlightSquares) {
-  // Implement your image generation and upload logic here
-  // Return the media ID if successful, or null if failed
   return null; // Placeholder
 }
 
 module.exports = {
   getLatestRoundNumber,
+  isRoundLive,
+  areAllGamesOver,
   getGameState,
   fetchCommentary,
   generateAndUploadImage,
