@@ -44,9 +44,30 @@ async function getLatestRoundNumber() {
     const response = await axios.get(getTourneyUrl());
     const data = response.data;
 
-    const latestRound = data.rounds.reduce((latest, round, index) => {
-      return round.count > 0 ? index + 1 : latest;
-    }, 0);
+    // Find the round with the highest 'live' value greater than 0
+    const rounds = data.rounds;
+    let latestRound = 0;
+
+    for (let i = 0; i < rounds.length; i++) {
+      if (rounds[i].live > 0) {
+        latestRound = i + 1; // Rounds are 1-indexed
+        break;
+      }
+    }
+
+    if (latestRound === 0) {
+      // If no round is live, default to the latest round with games
+      for (let i = rounds.length - 1; i >= 0; i--) {
+        if (rounds[i].count > 0) {
+          latestRound = i + 1;
+          break;
+        }
+      }
+    }
+
+    if (latestRound === 0) {
+      throw new Error('No rounds with live games found.');
+    }
 
     return latestRound;
   } catch (error) {
@@ -57,9 +78,16 @@ async function getLatestRoundNumber() {
 
 async function isRoundLive(round) {
   try {
-    const indexResponse = await axios.get(getIndexUrl(round));
-    const indexData = indexResponse.data;
-    return indexData.pairings && indexData.pairings.length > 0;
+    const response = await axios.get(getTourneyUrl());
+    const data = response.data;
+
+    const rounds = data.rounds;
+    if (rounds[round - 1] && rounds[round - 1].live > 0) {
+      return true;
+    }
+
+    logger.warn(`Round ${round} is not live.`);
+    return false;
   } catch (error) {
     logger.warn(`Round ${round} is not live or data is unavailable.`);
     return false;
