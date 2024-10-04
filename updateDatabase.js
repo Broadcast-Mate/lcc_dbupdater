@@ -6,69 +6,19 @@ const {
   generateAndUploadImage,
   isRoundLive,
   areAllGamesOver,
-  getRoundGames, // Add this import
+  getRoundGames,
+  isCheckmate,
+  getLatestRoundNumber, // Add this import
 } = require('./services');
 const { getLastMoveFromPGN } = require('./moveUtils');
 const logger = require('./logger');
-const axios = require('axios'); // Make sure axios is imported
+const axios = require('axios');
 const TOURNAMENT_ID = process.env.TOURNAMENT_ID;
-const GAME_UPDATE_INTERVAL = 3000; // 3 seconds
+const LIVE_GAME_POLL_INTERVAL = 4000; // 1 second
 const ROUND_CHECK_INTERVAL = 60000; // 1 minute
 const TOP_BOARDS = 6;
-const TOP_GAMES_COUNT = 6;
+
 const { MongoClient } = require('mongodb');
-const { isCheckmate } = require('./services');
-
-async function checkExistingEntries(collection) {
-  logger.info('Checking all existing entries for missing commentary and images...');
-  const allEntries = await collection.find({}).toArray();
-
-  for (const entry of allEntries) {
-    let shouldUpdate = false;
-    const update = { $set: {} };
-
-    if (!entry.commentaries || entry.commentaries.length === 0) {
-      logger.info(`Adding commentary for game ${entry.gameId}`);
-      const commentaryForEntry = await fetchCommentaryWithRetry(
-        entry.latestFEN,
-        entry.lastMove,
-        entry.white.name,
-        entry.black.name
-      );
-
-      if (commentaryForEntry) {
-        update.$push = { commentaries: commentaryForEntry };
-        shouldUpdate = true;
-      }
-    }
-
-    if (!entry.imageMediaId && entry.lastMove && entry.lastMove !== 'initial') {
-      logger.info(`Adding image for game ${entry.gameId}`);
-      const [fromSquare, toSquare] = entry.lastMove.match(/.{1,2}/g) || [];
-      if (fromSquare && toSquare) {
-        const imageMediaId = await generateAndUploadImage(
-          entry.latestFEN,
-          entry.white.name,
-          entry.black.name,
-          entry.evaluation,
-          [fromSquare, toSquare]
-        );
-
-        if (imageMediaId) {
-          update.$set.imageMediaId = imageMediaId;
-          shouldUpdate = true;
-        }
-      } else {
-        logger.warn(`Invalid lastMove for game ${entry.gameId}: ${entry.lastMove}`);
-      }
-    }
-
-    if (shouldUpdate) {
-      await collection.updateOne({ _id: entry._id }, update);
-      logger.info(`Updated entry ${entry._id} with missing data`);
-    }
-  }
-}
 
 async function fetchCommentaryWithRetry(latestFEN, lastMove, whiteName, blackName, retries = 3) {
   for (let i = 0; i < retries; i++) {
@@ -130,6 +80,30 @@ async function fetchCommentaryWithRetry(latestFEN, lastMove, whiteName, blackNam
   return null;
 }
 
+async function updateFinishedRounds(collection) {
+  logger.info('Updating finished rounds on boot up');
+  const latestRound = await getLatestRoundNumber();
+
+  for (let roundNumber = 1; roundNumber <= latestRound; roundNumber++) {
+    const isLive = await isRoundLive(roundNumber);
+    const allGamesOver = await areAllGamesOver(roundNumber);
+
+    if (isLive) {
+      logger.info(`Round ${roundNumber} is live. Stopping finished rounds update.`);
+      break;
+    }
+
+    if (allGamesOver) {
+      logger.info(`Updating finished round ${roundNumber}`);
+      await updateFinishedRound(collection, roundNumber);
+    } else {
+      logger.info(`Round ${roundNumber} is not finished. Stopping finished rounds update.`);
+      break;
+    }
+  }
+  logger.info('Finished updating finished rounds');
+}
+
 async function updateDatabase() {
   let db;
   try {
@@ -138,30 +112,30 @@ async function updateDatabase() {
     const collection = db.collection(process.env.COLLECTION_NAME);
     logger.info('Connected to database');
 
-    const MAX_ROUNDS = 9; // Set this to the maximum number of rounds in the tournament
+    // Update finished rounds on boot up
+    await updateFinishedRounds(collection);
 
-    for (let roundNumber = 1; roundNumber <= MAX_ROUNDS; roundNumber++) {
-      logger.info(`Processing round ${roundNumber}`);
-      const isLive = await isRoundLive(roundNumber);
-      const allGamesOver = await areAllGamesOver(roundNumber);
+    // Main loop for live rounds
+    while (true) {
+      const latestRound = await getLatestRoundNumber();
+      let foundLiveRound = false;
 
-      if (isLive) {
-        logger.info(`Processing live round ${roundNumber}`);
-        const games = await getRoundGames(roundNumber);
-        if (games && games.length > 0) {
-          await updateLiveGames(collection, { roundNumber, games }, TOP_BOARDS);
+      for (let roundNumber = 1; roundNumber <= latestRound; roundNumber++) {
+        const isLive = await isRoundLive(roundNumber);
+
+        if (isLive) {
+          logger.info(`Processing live round ${roundNumber}`);
+          await pollLiveRound(collection, roundNumber);
+          foundLiveRound = true;
+          break; // Stop checking further rounds
         }
-      } else if (allGamesOver) {
-        logger.info(`Processing finished round ${roundNumber}`);
-        await updateFinishedRound(collection, roundNumber);
-      } else {
-        logger.info(`Round ${roundNumber} is not live and not all games are over. Skipping.`);
+      }
+
+      if (!foundLiveRound) {
+        logger.info('No live rounds found. Waiting before next check.');
+        await new Promise(resolve => setTimeout(resolve, ROUND_CHECK_INTERVAL));
       }
     }
-
-    logger.info('Checking for missing data in existing entries...');
-    await checkExistingEntries(collection);
-    logger.info('Finished checking for missing data');
 
   } catch (error) {
     logger.error('Error in database updater:', error);
@@ -186,13 +160,24 @@ async function updateFinishedRound(collection, roundNumber) {
   }
 }
 
-async function updateLiveGames(collection, liveGames, topN) {
-  for (let i = 0; i < Math.min(topN, liveGames.games.length); i++) {
-    const game = liveGames.games[i];
+async function pollLiveRound(collection, roundNumber) {
+  logger.info(`Starting to poll live round ${roundNumber}`);
+  while (await isRoundLive(roundNumber)) {
+    const games = await getRoundGames(roundNumber);
+    if (games && games.length > 0) {
+      await updateLiveGames(collection, roundNumber, games);
+    }
+    await new Promise(resolve => setTimeout(resolve, LIVE_GAME_POLL_INTERVAL));
+  }
+  logger.info(`Round ${roundNumber} is no longer live`);
+}
+
+async function updateLiveGames(collection, roundNumber, games) {
+  for (const game of games) {
     try {
-      const gameState = await getGameState(liveGames.roundNumber, game.gameId);
+      const gameState = await getGameState(roundNumber, game.gameId);
       await updateGame(collection, gameState);
-      logger.info(`Updated live game ${game.gameId} in round ${gameState.round}`);
+      logger.info(`Updated live game ${game.gameId} in round ${roundNumber}`);
     } catch (error) {
       logger.error(`Error updating live game ${game.gameId}:`, error);
     }
@@ -257,18 +242,8 @@ async function updateGame(collection, gameState) {
 }
 
 async function startDatabaseUpdater() {
-  logger.info('Starting database updater loop');
-  while (true) {
-    try {
-      logger.info('Database updater iteration started');
-      await updateDatabase();
-      logger.info('Database updater iteration completed');
-    } catch (error) {
-      logger.error('Error in database updater:', error);
-    }
-    logger.info('Waiting for next iteration...');
-    await new Promise(resolve => setTimeout(resolve, 60000));
-  }
+  logger.info('Starting database updater');
+  await updateDatabase();
 }
 
 module.exports = { startDatabaseUpdater };

@@ -310,3 +310,55 @@
 2024-10-04T13:48:42.070Z error: Error fetching game 1 for round 15: Request failed with status code 404
 2024-10-04T13:48:42.530Z error: Error fetching game 1 for round 16: Request failed with status code 404
 2024-10-04T13:48:42.987Z error: Error fetching game 1 for round 17: Request failed with status code 404
+2024-10-04T13:51:05.110Z error: Error fetching game 1 for round 6: Request failed with status code 404
+2024-10-04T13:51:05.575Z error: Error fetching game 1 for round 7: Request failed with status code 404
+2024-10-04T13:51:06.039Z error: Error fetching game 1 for round 8: Request failed with status code 404
+2024-10-04T13:51:06.507Z error: Error fetching game 1 for round 9: Request failed with status code 404
+2024-10-04T13:51:06.583Z error: Error in database updater: Cannot read properties of undefined (reading 'name')
+2024-10-04T13:52:37.582Z error: Error fetching game 1 for round 6: Request failed with status code 404
+2024-10-04T13:52:38.040Z error: Error fetching game 1 for round 7: Request failed with status code 404
+2024-10-04T13:52:38.497Z error: Error fetching game 1 for round 8: Request failed with status code 404
+2024-10-04T13:52:38.956Z error: Error fetching game 1 for round 9: Request failed with status code 404
+2024-10-04T13:52:39.034Z error: Error in database updater: Cannot read properties of undefined (reading 'name')
+2024-10-04T13:53:21.755Z error: Error fetching game 1 for round 6: Request failed with status code 404
+2024-10-04T13:53:22.223Z error: Error fetching game 1 for round 7: Request failed with status code 404
+2024-10-04T13:53:22.695Z error: Error fetching game 1 for round 8: Request failed with status code 404
+2024-10-04T13:53:23.169Z error: Error fetching game 1 for round 9: Request failed with status code 404
+2024-10-04T13:53:23.247Z error: Error in database updater: Cannot read properties of undefined (reading 'name')
+2024-10-04T13:55:53.453Z error: Error fetching game 1 for round 6: Request failed with status code 404
+2024-10-04T13:55:53.913Z error: Error fetching game 1 for round 7: Request failed with status code 404
+2024-10-04T13:55:54.376Z error: Error fetching game 1 for round 8: Request failed with status code 404
+2024-10-04T13:55:54.841Z error: Error fetching game 1 for round 9: Request failed with status code 404
+2024-10-04T13:55:54.948Z error: Error in database updater: Cannot read properties of undefined (reading 'name')
+2024-10-04T13:59:37.614Z error: Error fetching game state for game 3 in round 5: Invalid move in PGN: hxg3
+2024-10-04T13:59:37.614Z error: Error updating live game 3: Invalid move in PGN: hxg3
+2024-10-04T13:59:49.682Z error: Error fetching game state for game 3 in round 5: Invalid move in PGN: hxg3
+2024-10-04T13:59:49.683Z error: Error updating live game 3: Invalid move in PGN: hxg3
+2024-10-04T13:59:57.395Z error: Error fetching game state for game 3 in round 5: Invalid move in PGN: hxg3
+2024-10-04T13:59:57.395Z error: Error updating live game 3: Invalid move in PGN: hxg3
+2024-10-04T14:00:09.808Z error: Error fetching game state for game 3 in round 5: Invalid move in PGN: hxg3
+2024-10-04T14:00:09.808Z error: Error updating live game 3: Invalid move in PGN: hxg3
+2024-10-04T14:00:21.278Z error: Error fetching game state for game 3 in round 5: Invalid move in PGN: hxg3
+2024-10-04T14:00:21.278Z error: Error updating live game 3: Invalid move in PGN: hxg3
+2024-10-04T14:00:28.609Z error: Error fetching game state for game 3 in round 5: Invalid move in PGN: hxg3
+2024-10-04T14:00:28.609Z error: Error updating live game 3: Invalid move in PGN: hxg3
+2024-10-04T14:00:35.897Z error: Error fetching game state for game 3 in round 5: Invalid move in PGN: hxg3
+2024-10-04T14:00:35.897Z error: Error updating live game 3: Invalid move in PGN: hxg3
+2024-10-04T14:00:43.237Z error: Error fetching game state for game 3 in round 5: Invalid move in PGN: hxg3
+2024-10-04T14:00:43.238Z error: Error updating live game 3: Invalid move in PGN: hxg3
+2024-10-04T14:00:53.875Z error: Error fetching game state for game 3 in round 5: Invalid move in PGN: hxg3
+2024-10-04T14:00:53.875Z error: Error updating live game 3: Invalid move in PGN: hxg3
+2024-10-04T14:01:01.173Z error: Error fetching game state for game 3 in round 5: Invalid move in PGN: hxg3
+2024-10-04T14:01:01.173Z error: Error updating live game 3: Invalid move in PGN: hxg3
+2024-10-04T14:01:08.521Z error: Error fetching game state for game 3 in round 5: Invalid move in PGN: hxg3
+2024-10-04T14:01:08.521Z error: Error updating live game 3: Invalid move in PGN: hxg3
+2024-10-04T14:01:20.408Z error: Error fetching game state for game 3 in round 5: Invalid move in PGN: hxg3
+2024-10-04T14:01:20.408Z error: Error updating live game 3: Invalid move in PGN: hxg3
+2024-10-04T14:01:36.829Z error: Error fetching game state for game 3 in round 5: Invalid move in PGN: hxg3
+2024-10-04T14:01:36.830Z error: Error updating live game 3: Invalid move in PGN: hxg3
+2024-10-04T14:01:47.948Z error: Error fetching game state for game 3 in round 5: Invalid move in PGN: hxg3
+2024-10-04T14:01:47.948Z error: Error updating live game 3: Invalid move in PGN: hxg3
+2024-10-04T14:01:58.714Z error: Error fetching game state for game 3 in round 5: Invalid move in PGN: hxg3
+2024-10-04T14:01:58.715Z error: Error updating live game 3: Invalid move in PGN: hxg3
+2024-10-04T14:02:09.972Z error: Error fetching game state for game 3 in round 5: Invalid move in PGN: hxg3
+2024-10-04T14:02:09.972Z error: Error updating live game 3: Invalid move in PGN: hxg3
