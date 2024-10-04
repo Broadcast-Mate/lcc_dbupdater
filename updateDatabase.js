@@ -138,7 +138,7 @@ async function updateDatabase() {
     const collection = db.collection(process.env.COLLECTION_NAME);
     logger.info('Connected to database');
 
-    const MAX_ROUNDS = 35; // Set this to the maximum number of rounds in the tournament
+    const MAX_ROUNDS = 9; // Set this to the maximum number of rounds in the tournament
 
     for (let roundNumber = 1; roundNumber <= MAX_ROUNDS; roundNumber++) {
       logger.info(`Processing round ${roundNumber}`);
