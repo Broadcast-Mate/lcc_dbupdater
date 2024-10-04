@@ -61,6 +61,7 @@ async function getLatestRoundNumber() {
     const rounds = tourneyData.rounds;
     let latestRound = 0;
 
+    // First, check for live rounds
     for (let i = 0; i < rounds.length; i++) {
       if (rounds[i].live > 0) {
         latestRound = i + 1;
@@ -68,6 +69,7 @@ async function getLatestRoundNumber() {
       }
     }
 
+    // If no live rounds, find the last round with games
     if (latestRound === 0) {
       for (let i = rounds.length - 1; i >= 0; i--) {
         if (rounds[i].count > 0) {
@@ -78,7 +80,7 @@ async function getLatestRoundNumber() {
     }
 
     if (latestRound === 0) {
-      throw new Error('No rounds with live games found.');
+      throw new Error('No rounds with games found.');
     }
 
     return latestRound;
@@ -300,6 +302,38 @@ async function generateAndUploadImage(fen, whiteName, blackName, evaluation, hig
   }
 }
 
+async function getRoundGames(roundNumber) {
+  const games = [];
+  const MAX_GAMES = 6; // Adjust this based on the maximum number of games per round
+
+  for (let gameNumber = 1; gameNumber <= MAX_GAMES; gameNumber++) {
+    try {
+      const response = await axios.get(`https://1.pool.livechesscloud.com/get/${TOURNAMENT_ID}/round-${roundNumber}/game-${gameNumber}.json?poll`);
+      const gameData = response.data;
+      
+      if (gameData.result !== "NOTPLAYED") {
+        games.push({
+          gameId: gameNumber,
+          ...gameData
+        });
+      }
+    } catch (error) {
+      logger.error(`Error fetching game ${gameNumber} for round ${roundNumber}:`, error);
+      // If we get a 404, it means we've reached the end of the games for this round
+      if (error.response && error.response.status === 404) {
+        break;
+      }
+    }
+  }
+
+  return games;
+}
+
+function isCheckmate(fen) {
+  const chess = new Chess(fen);
+  return chess.isCheckmate();
+}
+
 module.exports = {
   getLatestRoundNumber,
   isRoundLive,
@@ -307,4 +341,6 @@ module.exports = {
   getGameState,
   fetchCommentary,
   generateAndUploadImage,
+  getRoundGames,
+  isCheckmate, // Add this line
 };
